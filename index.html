@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#08111f">
+<title>Neon Snake — Jogo da Cobrinha</title>
+<style>
+:root{--bg:#07111f;--panel:#101e30;--panel2:#14263b;--line:#263c55;--text:#eef7ff;--muted:#91a8bf;--green:#69f0ae;--cyan:#5de1ff;--pink:#ff668e;--gold:#ffd166}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(ellipse at 50% 0%,#132d48 0%,#081525 42%,#050b14 100%)}
+body{min-height:100svh;display:grid;place-items:center;padding:20px;overflow-x:hidden}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.app{width:min(100%,560px);display:flex;flex-direction:column;gap:16px}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#69f0ae,#39b8ce);display:grid;place-items:center;color:#06131d;font-size:23px;box-shadow:0 0 28px #69f0ae38}
+.brand h1{font-size:clamp(19px,4vw,25px);letter-spacing:-.8px;margin:0;font-weight:850}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.status-pill{border:1px solid var(--line);background:#0c1a2a;color:var(--muted);padding:8px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:1px}
+.status-pill::before{content:"";display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;margin-right:7px;box-shadow:0 0 10px var(--green)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:linear-gradient(145deg,#14263a,#0d1b2c);border:1px solid var(--line);border-radius:16px;padding:13px 17px;display:flex;align-items:center;justify-content:space-between}
+.stat-label{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
+.stat-value{font-size:25px;font-weight:900;font-variant-numeric:tabular-nums}
+.stat:first-child .stat-value{color:var(--green)}.stat:last-child .stat-value{color:var(--gold)}
+.game-shell{position:relative;padding:10px;border-radius:20px;background:linear-gradient(145deg,#1a3048,#0a1726);border:1px solid #2b4560;box-shadow:0 22px 70px #0008,inset 0 1px #ffffff12}
+.canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:#07131e}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:#06111bdc;backdrop-filter:blur(7px);text-align:center}
+.overlay.hidden{display:none}
+.dialog{width:min(100%,330px);padding:27px 22px;border:1px solid #35516a;border-radius:20px;background:linear-gradient(145deg,#152a40f5,#0b1b2cf5);box-shadow:0 18px 55px #0009}
+.dialog-icon{font-size:39px;margin-bottom:8px;filter:drop-shadow(0 0 14px #69f0ae55)}
+.dialog h2{font-size:26px;letter-spacing:-.8px;margin:0 0 8px}
+.dialog p{color:#a9bdcf;line-height:1.55;font-size:13px;margin:0 0 20px}
+.primary,.secondary{border:0;border-radius:12px;padding:13px 18px;font-weight:850;transition:transform .15s,filter .15s}
+.primary{width:100%;color:#06151c;background:linear-gradient(100deg,var(--green),#54d9e8);box-shadow:0 8px 24px #69f0ae2b}
+.secondary{color:var(--text);background:#1b3046;border:1px solid #35516a}
+.primary:hover,.secondary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{text-align:center;color:var(--muted);font-size:12px;margin-top:1px}
+kbd{font:inherit;font-size:10px;font-weight:800;color:#d8e7f3;background:#182b40;border:1px solid #35516a;border-radius:5px;padding:3px 6px;margin:0 2px}
+.mobile-controls{display:none;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);justify-content:center;gap:7px;margin-top:2px}
+.dpad{border:1px solid #35516a;border-radius:13px;background:linear-gradient(145deg,#172d43,#0d1d2e);color:#dff8ff;font-size:21px;font-weight:900;box-shadow:0 5px 14px #0003;touch-action:none}
+.dpad:active{background:#24445c;transform:scale(.96)}
+.dpad.up{grid-column:2;grid-row:1}.dpad.left{grid-column:1;grid-row:2}.dpad.down{grid-column:2;grid-row:2}.dpad.right{grid-column:3;grid-row:2}
+.footer{display:flex;justify-content:space-between;gap:10px;color:#718ba4;font-size:10px;letter-spacing:.5px}
+@media(max-width:600px){body{padding:14px 12px}.app{gap:12px}.game-shell{padding:7px}.mobile-controls{display:grid}.hint{display:none}.stat{padding:10px 13px}.stat-value{font-size:22px}}
+@media(max-height:760px) and (min-width:601px){body{padding:12px}.app{width:min(78vh,520px);gap:10px}.game-shell{padding:7px}.stat{padding:8px 14px}.stat-value{font-size:21px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topline">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">▦</div><div><h1>NEON SNAKE</h1><p>Classic arcade · Remixed</p></div></div>
+    <div class="status-pill" id="status" aria-live="polite">PRONTO</div>
+  </header>
+  <section class="stats" aria-label="Placar">
+    <div class="stat"><div><div class="stat-label">Pontuação</div><div class="stat-value" id="score">000</div></div><span aria-hidden="true">✦</span></div>
+    <div class="stat"><div><div class="stat-label">Recorde</div><div class="stat-value" id="best">000</div></div><span aria-hidden="true">♛</span></div>
+  </section>
+  <section class="game-shell" aria-label="Área do jogo">
+    <div class="canvas-wrap">
+      <canvas id="game" width="480" height="480" aria-label="Tabuleiro do jogo Snake"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="dialog">
+          <div class="dialog-icon" id="dialogIcon">🐍</div>
+          <h2 id="dialogTitle">Pronto para jogar?</h2>
+          <p id="dialogText">Guie a cobrinha, colete os pontos de energia e tente bater seu recorde. Não bata nas paredes nem em você mesmo!</p>
+          <button class="primary" id="mainAction">INICIAR JOGO</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="actions">
+    <button class="secondary" id="pauseBtn" disabled>Ⅱ &nbsp; Pausar</button>
+    <button class="secondary" id="restartBtn">↻ &nbsp; Reiniciar</button>
+  </div>
+  <div class="hint">Mover: <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> ou <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> &nbsp;·&nbsp; Pausar: <kbd>ESPAÇO</kbd></div>
+  <div class="mobile-controls" aria-label="Controles direcionais">
+    <button class="dpad up" data-dir="up" aria-label="Cima">↑</button>
+    <button class="dpad left" data-dir="left" aria-label="Esquerda">←</button>
+    <button class="dpad down" data-dir="down" aria-label="Baixo">↓</button>
+    <button class="dpad right" data-dir="right" aria-label="Direita">→</button>
+  </div>
+  <footer class="footer"><span>ARCADE MODE · 01</span><span>FEITO PARA JOGAR ✦</span></footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const scoreEl = document.getElementById("score");
+  const bestEl = document.getElementById("best");
+  const statusEl = document.getElementById("status");
+  const overlay = document.getElementById("overlay");
+  const dialogIcon = document.getElementById("dialogIcon");
+  const dialogTitle = document.getElementById("dialogTitle");
+  const dialogText = document.getElementById("dialogText");
+  const mainAction = document.getElementById("mainAction");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const restartBtn = document.getElementById("restartBtn");
+
+  const CELLS = 24;
+  const CELL = canvas.width / CELLS;
+  const DIRECTIONS = {
+    up: {x:0,y:-1}, down: {x:0,y:1},
+    left: {x:-1,y:0}, right: {x:1,y:0}
+  };
+  let snake, food, direction, nextDirection, score, best;
+  let state = "ready"; // ready, running, paused, over
+  let lastStep = 0;
+  let accumulator = 0;
+  let stepDuration = 125;
+  let animationId = 0;
+
+  try { best = Number(localStorage.getItem("neonSnakeBest")) || 0; }
+  catch (_) { best = 0; }
+  bestEl.textContent = formatScore(best);
+
+  function formatScore(value) { return String(value).padStart(3, "0"); }
+
+  function resetGame() {
+    snake = [{x:12,y:12},{x:11,y:12},{x:10,y:12}];
+    direction = DIRECTIONS.right;
+    nextDirection = DIRECTIONS.right;
+    score = 0;
+    stepDuration = 125;
+    accumulator = 0;
+    scoreEl.textContent = formatScore(score);
+    placeFood();
+    draw();
+  }
+
+  function placeFood() {
+    const free = [];
+    for (let y=0; y<CELLS; y++) for (let x=0; x<CELLS; x++) {
+      if (!snake.some(part => part.x===x && part.y===y)) free.push({x,y});
+    }
+    food = free.length ? free[Math.floor(Math.random()*free.length)] : null;
+  }
+
+  function setState(newState) {
+    state = newState;
+    statusEl.textContent = ({ready:"PRONTO",running:"EM JOGO",paused:"PAUSADO",over:"FIM DE JOGO"})[state];
+    pauseBtn.disabled = state==="ready" || state==="over";
+    pauseBtn.innerHTML = state==="paused" ? "▶ &nbsp; Continuar" : "Ⅱ &nbsp; Pausar";
+  }
+
+  function showOverlay(icon, title, message, buttonText) {
+    dialogIcon.textContent = icon;
+    dialogTitle.textContent = title;
+    dialogText.textContent = message;
+    mainAction.textContent = buttonText;
+    overlay.classList.remove("hidden");
+  }
+  function hideOverlay() { overlay.classList.add("hidden"); }
+
+  function startGame() {
+    if (state==="over") resetGame();
+    setState("running");
+    hideOverlay();
+    lastStep = 0;
+    accumulator = 0;
+    cancelAnimationFrame(animationId);
+    animationId = requestAnimationFrame(gameLoop);
+  }
+
+  function pauseGame() {
+    if (state==="running") {
+      setState("paused");
+      showOverlay("Ⅱ", "Jogo pausado", "Respire um pouco. Quando estiver pronto, continue de onde parou.", "CONTINUAR");
+      cancelAnimationFrame(animationId);
+    } else if (state==="paused") {
+      setState("running");
+      hideOverlay();
+      lastStep = 0;
+      animationId = requestAnimationFrame(gameLoop);
+    }
+  }
+
+  function endGame() {
+    setState("over");
+    const isRecord = score > 0 && score >= best;
+    showOverlay("💥", "Game Over!", `Você fez ${score} ponto${score===1?"":"s"}. ${isRecord ? "Novo recorde! Mandou muito bem." : "Mais uma tentativa para superar seu recorde?"}`, "JOGAR NOVAMENTE");
+    cancelAnimationFrame(animationId);
+  }
+
+  function changeDirection(dirName) {
+    if (!DIRECTIONS[dirName] || state==="over") return;
+    const candidate = DIRECTIONS[dirName];
+    // Impede a cobrinha de inverter diretamente para dentro do próprio corpo.
+    if (candidate.x === -direction.x && candidate.y === -direction.y) return;
+    nextDirection = candidate;
+    if (state==="ready") {
+      direction = candidate;
+      draw();
+    }
+  }
+
+  function update() {
+    direction = nextDirection;
+    const head = {x:snake[0].x+direction.x, y:snake[0].y+direction.y};
+    const eating = food && head.x===food.x && head.y===food.y;
+    const bodyToCheck = eating ? snake : snake.slice(0,-1);
+    const hitWall = head.x<0 || head.x>=CELLS || head.y<0 || head.y>=CELLS;
+    const hitSelf = bodyToCheck.some(part => part.x===head.x && part.y===head.y);
+    if (hitWall || hitSelf) { endGame(); return; }
+
+    snake.unshift(head);
+    if (eating) {
+      score += 10;
+      scoreEl.textContent = formatScore(score);
+      if (score > best) {
+        best = score;
+        bestEl.textContent = formatScore(best);
+        try { localStorage.setItem("neonSnakeBest", String(best)); } catch (_) {}
+      }
+      // Aumenta gradualmente a velocidade, sem deixar o jogo rápido demais.
+      stepDuration = Math.max(65, 125 - Math.floor(score/50)*5);
+      placeFood();
+      if (!food) { endGame(); return; }
+    } else {
+      snake.pop();
+    }
+  }
+
+  function roundedRect(x,y,w,h,r) {
+    ctx.beginPath();
+    ctx.roundRect(x,y,w,h,r);
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "#07131e";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Grade sutil do tabuleiro.
+    ctx.strokeStyle = "rgba(113,164,190,.075)";
+    ctx.lineWidth = 1;
+    for (let i=1;i<CELLS;i++) {
+      const p=i*CELL;
+      ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,canvas.height);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(canvas.width,p);ctx.stroke();
+    }
+
+    if (food) {
+      const cx=(food.x+.5)*CELL, cy=(food.y+.5)*CELL;
+      ctx.save();
+      ctx.shadowColor="#ff668e";ctx.shadowBlur=18;
+      const grad=ctx.createRadialGradient(cx-3,cy-3,1,cx,cy, CELL*.42);
+      grad.addColorStop(0,"#fff0f4");grad.addColorStop(.28,"#ff9ab2");grad.addColorStop(1,"#ff4778");
+      ctx.fillStyle=grad;
+      ctx.beginPath();ctx.arc(cx,cy,CELL*.31,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      ctx.fillStyle="#ffd0dc";
+      ctx.beginPath();ctx.arc(cx-3,cy-3,2,0,Math.PI*2);ctx.fill();
+    }
+
+    snake.forEach((part,index) => {
+      const inset=index===0?2.2:2.8;
+      const x=part.x*CELL+inset, y=part.y*CELL+inset;
+      const size=CELL-inset*2;
+      ctx.save();
+      if(index===0){ctx.shadowColor="#69f0ae";ctx.shadowBlur=17;}
+      const gradient=ctx.createLinearGradient(x,y,x+size,y+size);
+      if(index===0){gradient.addColorStop(0,"#b1ffd5");gradient.addColorStop(1,"#42d98e");}
+      else {gradient.addColorStop(0,"#5ee6b0");gradient.addColorStop(1,"#1eaa83");}
+      ctx.fillStyle=gradient;
+      roundedRect(x,y,size,size,index===0?6:5);ctx.fill();
+      ctx.restore();
+      if(index===0) drawEyes(part);
+    });
+  }
+
+  function drawEyes(head) {
+    const cx=(head.x+.5)*CELL, cy=(head.y+.5)*CELL;
+    let eyes;
+    if(direction.x===1) eyes=[[cx+4,cy-4],[cx+4,cy+4]];
+    else if(direction.x===-1) eyes=[[cx-4,cy-4],[cx-4,cy+4]];
+    else if(direction.y===-1) eyes=[[cx-4,cy-4],[cx+4,cy-4]];
+    else eyes=[[cx-4,cy+4],[cx+4,cy+4]];
+    ctx.fillStyle="#073127";
+    eyes.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fill();});
+  }
+
+  function gameLoop(timestamp) {
+    if (state!=="running") return;
+    if (!lastStep) lastStep=timestamp;
+    accumulator += Math.min(timestamp-lastStep, 100);
+    lastStep=timestamp;
+    while (accumulator>=stepDuration && state==="running") {
+      update();
+      accumulator-=stepDuration;
+    }
+    draw();
+    if (state==="running") animationId=requestAnimationFrame(gameLoop);
+  }
+
+  const keyMap = {
+    ArrowUp:"up", w:"up", W:"up",
+    ArrowDown:"down", s:"down", S:"down",
+    ArrowLeft:"left", a:"left", A:"left",
+    ArrowRight:"right", d:"right", D:"right"
+  };
+  document.addEventListener("keydown", event => {
+    if (keyMap[event.key]) {
+      event.preventDefault();
+      changeDirection(keyMap[event.key]);
+    } else if (event.code==="Space" || event.key===" ") {
+      event.preventDefault();
+      if (state==="running" || state==="paused") pauseGame();
+      else if (state==="ready") startGame();
+    } else if (event.key==="Enter" && (state==="ready" || state==="over")) {
+      startGame();
+    }
+  });
+
+  document.querySelectorAll("[data-dir]").forEach(button => {
+    const dir=button.dataset.dir;
+    button.addEventListener("pointerdown", event => {event.preventDefault();changeDirection(dir);});
+  });
+
+  mainAction.addEventListener("click", () => {
+    if (state==="paused") pauseGame();
+    else startGame();
+  });
+  pauseBtn.addEventListener("click", pauseGame);
+  restartBtn.addEventListener("click", () => {
+    cancelAnimationFrame(animationId);
+    resetGame();
+    setState("ready");
+    showOverlay("🐍","Nova partida?","Tudo pronto. Colete a energia, cresça e tente bater seu recorde!","INICIAR JOGO");
+  });
+
+  // Swipe no próprio tabuleiro para jogar confortavelmente no celular.
+  let touchStart=null;
+  canvas.addEventListener("pointerdown", event => {
+    if (event.pointerType==="touch") touchStart={x:event.clientX,y:event.clientY};
+  });
+  canvas.addEventListener("pointerup", event => {
+    if (!touchStart) return;
+    const dx=event.clientX-touchStart.x, dy=event.clientY-touchStart.y;
+    if (Math.max(Math.abs(dx),Math.abs(dy))>18) {
+      if (Math.abs(dx)>Math.abs(dy)) changeDirection(dx>0?"right":"left");
+      else changeDirection(dy>0?"down":"up");
+    }
+    touchStart=null;
+  });
+
+  resetGame();
+  setState("ready");
+  showOverlay("🐍","Pronto para jogar?","Guie a cobrinha, colete os pontos de energia e tente bater seu recorde. Não bata nas paredes nem em você mesmo!","INICIAR JOGO");
+})();
+</script>
+</body>
+</html>
